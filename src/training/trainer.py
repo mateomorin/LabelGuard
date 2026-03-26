@@ -17,5 +17,3 @@ fs = s3fs.S3FileSystem(
     secret=os.environ["AWS_SECRET_ACCESS_KEY"],
     token=os.environ["AWS_SESSION_TOKEN"]
 )
-
-
