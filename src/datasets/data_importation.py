@@ -1,6 +1,7 @@
 import duckdb
 import pandas as pd
 import numpy as np
+from collections import Counter
 
 
 def fetch_original_data(
@@ -24,6 +25,7 @@ def fetch_original_data(
     """
 
     con = duckdb.connect()
+    rng = np.random.default_rng(seed=random_state)
 
     # ===============================
     #          Check n_sample
@@ -41,10 +43,6 @@ def fetch_original_data(
     #       Exhaustive sampling
     # ===============================
 
-    # Define seed
-    rng = np.random.default_rng(seed=random_state)
-
-    # Pick a random row_id for each code
     code_row_count = con.execute(f"""
     SELECT code, COUNT(*) AS n_rows
     FROM read_parquet('{path}')
@@ -115,6 +113,29 @@ def select_synthetic_data(
         pd.DataFrame: a dataframe with columns code and embedding.
     """
     con = duckdb.connect()
+    rng = np.random.default_rng(seed=random_state)
+
+    # ===============================
+    #    Counting codes to sample
+    # ===============================
+    code_counts = Counter(code_list)
+
+    # Pick a random row_id for each code
+    code_row_count = con.execute(f"""
+    SELECT code, COUNT(*) AS n_rows
+    FROM read_parquet('{path}')
+    GROUP BY code
+    ORDER BY code
+    """).df()
+
+    code_row_count["k"] = code_row_count.apply(
+        lambda x: rng.integers(1, x["n_rows"] + 1, size=code_counts[x["code"]]),
+        axis=1
+    )
+    code_row_count["offset"] = code_row_count["n_rows"].cumsum() - code_row_count["n_rows"]
+    code_row_count["row_id"] = code_row_count["offset"] + code_row_count["k"]
+
+    selected_ids = code_row_count["row_id"].to_numpy()
 
     con.register("selected_ids", {"row_id": code_list})
 
