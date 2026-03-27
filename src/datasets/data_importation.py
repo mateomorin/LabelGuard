@@ -128,16 +128,19 @@ def select_synthetic_data(
     ORDER BY code
     """).df()
 
-    code_row_count["k"] = code_row_count.apply(
+    code_row_count["row_id"] = code_row_count.apply(
         lambda x: rng.integers(1, x["n_rows"] + 1, size=code_counts[x["code"]]),
         axis=1
     )
     code_row_count["offset"] = code_row_count["n_rows"].cumsum() - code_row_count["n_rows"]
-    code_row_count["row_id"] = code_row_count["offset"] + code_row_count["k"]
+    code_row_count["row_id"] = code_row_count["offset"] + code_row_count["row_id"]
 
-    selected_ids = code_row_count["row_id"].to_numpy()
+    all_row_ids = code_row_count["row_id"].explode().to_frame()
 
-    con.register("selected_ids", {"row_id": code_list})
+    code_row_count.drop(columns=["row_id"], inplace=True)
+    code_row_count = code_row_count.join(all_row_ids, how="right", lsuffix="_list")
+
+    con.register("selected_ids", code_row_count[["row_id"]])
 
     query = f"""
     SELECT t.code, t.embedding
