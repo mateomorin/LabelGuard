@@ -120,7 +120,11 @@ def select_synthetic_data(
     # ===============================
     code_counts = Counter(code_list)
 
-    # Pick a random row_id for each code
+    # ==============================================
+    #    Selecting corresponding labels randomly
+    # ==============================================
+    
+    # Retrieving number of labels per codes
     code_row_count = con.execute(f"""
     SELECT code, COUNT(*) AS n_rows
     FROM read_parquet('{path}')
@@ -128,19 +132,19 @@ def select_synthetic_data(
     ORDER BY code
     """).df()
 
+    # Selecting the correct number of random labels
     code_row_count["row_id"] = code_row_count.apply(
         lambda x: rng.integers(1, x["n_rows"] + 1, size=code_counts[x["code"]]),
         axis=1
     )
+
+    # Converting into global row id for join
     code_row_count["offset"] = code_row_count["n_rows"].cumsum() - code_row_count["n_rows"]
     code_row_count["row_id"] = code_row_count["offset"] + code_row_count["row_id"]
 
+    # Creating the table for duckdb
     all_row_ids = code_row_count["row_id"].explode().to_frame()
-
-    code_row_count.drop(columns=["row_id"], inplace=True)
-    code_row_count = code_row_count.join(all_row_ids, how="right", lsuffix="_list")
-
-    con.register("selected_ids", code_row_count[["row_id"]])
+    con.register("selected_ids", all_row_ids[["row_id"]])
 
     query = f"""
     SELECT t.code, t.embedding
