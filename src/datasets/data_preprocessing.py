@@ -23,7 +23,7 @@ def create_train_test(
         random_state (int): seed for the random splitting
     """
 
-    X = pd.concat(df_real["embedding"], df_synth["embedding"]).values
+    X = pd.concat([df_real["embedding"], df_synth["embedding"]]).values
     X = np.vstack(X)
     y = np.append(np.zeros(len(df_real)), np.ones(len(df_synth))).reshape(-1, 1)
 

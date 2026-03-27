@@ -1,5 +1,5 @@
 import joblib
-from .base_model import BaseModel
+from .model_interface import BaseModel
 
 
 class SklearnModel(BaseModel):

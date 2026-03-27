@@ -76,7 +76,11 @@ def fetch_original_data(
     else:
         final_ids = selected_ids
 
-    con.register("selected_ids", {"row_id": final_ids})
+    selected_ids = pd.DataFrame({
+        "row_id": final_ids
+    })
+
+    con.register("selected_ids", selected_ids)
 
     query = f"""
     SELECT t.code, t.embedding

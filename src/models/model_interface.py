@@ -21,5 +21,5 @@ class BaseModel(ABC):
 
     @classmethod
     @abstractmethod
-    def load(cls, path: str):
+    def load(cls, path: str, device=None):
         pass
