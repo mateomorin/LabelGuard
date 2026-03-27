@@ -123,7 +123,7 @@ def select_synthetic_data(
     # ==============================================
     #    Selecting corresponding labels randomly
     # ==============================================
-    
+
     # Retrieving number of labels per codes
     code_row_count = con.execute(f"""
     SELECT code, COUNT(*) AS n_rows
