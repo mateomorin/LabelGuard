@@ -14,7 +14,7 @@ def build_model(cfg):
         model = SklearnModel(
             LogisticRegression(
                 C=logreg_cfg["C"] or 1.0,
-                random_state=logreg_cfg["random_state"],
+                random_state=cfg["random_state"],
                 solver=logreg_cfg["solver"] or "sag",
                 max_iter=logreg_cfg["max_iter"] or 100
             )
@@ -27,7 +27,7 @@ def build_model(cfg):
         model = SklearnModel(
             LinearSVC(
                 C=svm_cfg["C"] or 1.0,
-                random_state=logreg_cfg["random_state"],
+                random_state=cfg["random_state"],
                 max_iter=logreg_cfg["max_iter"] or 1000
             )
         )
