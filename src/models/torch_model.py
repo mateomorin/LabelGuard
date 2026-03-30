@@ -42,22 +42,23 @@ class TorchMLPClassifier(BaseModel):
             input_dim: int,
             hidden_layers=(64, 32),
             loss_fn=None,
-            optimizer_cls=torch.optim.Adam,
+            optimizer_cls=None,
             lr=1e-3,
             device=None,
             ):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
-        # modèle configurable
+        # model
         self.model = MLP(
             input_dim=input_dim,
             hidden_layers=hidden_layers,
         ).to(self.device)
 
-        # loss modifiable
+        # loss
         self.loss_fn = loss_fn or nn.BCEWithLogitsLoss()
 
-        # optimizer modifiable
+        # optimizer
+        optimizer_cls = optimizer_cls or torch.optim.Adam
         self.optimizer = optimizer_cls(
             self.model.parameters(),
             lr=lr,
