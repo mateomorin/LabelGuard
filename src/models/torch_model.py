@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.utils.data import TensorDataset, DataLoader
 import mlflow
 import mlflow.pytorch
 
@@ -54,7 +55,7 @@ class TorchMLPClassifier(BaseModel):
         ).to(self.device)
 
         # loss modifiable
-        self.loss_fn = loss_fn or nn.CrossEntropyLoss()
+        self.loss_fn = loss_fn or nn.BCEWithLogitsLoss()
 
         # optimizer modifiable
         self.optimizer = optimizer_cls(
@@ -65,19 +66,40 @@ class TorchMLPClassifier(BaseModel):
     # ======================
     # TRAIN
     # ======================
-    def fit(self, X, y, epochs=10):
+
+    def fit(self, X, y, epochs=10, batch_size=32):
         self.model.train()
 
+        # ---- device ----
         X = X.to(self.device)
-        y = y.to(self.device)
+        y = y.float().to(self.device)
 
-        for _ in range(epochs):
-            pred = self.model(X)
-            loss = self.loss_fn(pred, y)
+        # ---- dataset ----
+        dataset = TensorDataset(X, y)
 
-            loss.backward()
-            self.optimizer.step()
-            self.optimizer.zero_grad()
+        loader = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=True,
+        )
+
+        # ---- training loop ----
+        for epoch in range(epochs):
+            epoch_loss = 0.0
+
+            for xb, yb in loader:
+                self.optimizer.zero_grad()
+
+                logits = self.model(xb)
+                loss = self.loss_fn(logits, yb)
+
+                loss.backward()
+                self.optimizer.step()
+
+                epoch_loss += loss.item() * xb.size(0)
+
+            epoch_loss /= len(loader.dataset)
+            print(f"Epoch {epoch+1}/{epochs} - loss: {epoch_loss:.4f}")
 
     # ======================
     # PREDICT
@@ -85,10 +107,12 @@ class TorchMLPClassifier(BaseModel):
     @torch.no_grad()
     def predict(self, X):
         self.model.eval()
-        X = X.to(self.device)
 
+        X = X.to(self.device)
         logits = self.model(X)
-        return logits.argmax(dim=1)
+
+        probs = torch.sigmoid(logits)
+        return (probs > 0.5).long().squeeze(1)
 
     # ======================
     # PREDICT PROBA
@@ -96,10 +120,12 @@ class TorchMLPClassifier(BaseModel):
     @torch.no_grad()
     def predict_proba(self, X):
         self.model.eval()
-        X = X.to(self.device)
 
+        X = X.to(self.device)
         logits = self.model(X)
-        return torch.softmax(logits, dim=1)
+
+        probs = torch.sigmoid(logits)
+        return torch.cat([probs], dim=1)
 
     # ======================
     # SAVE

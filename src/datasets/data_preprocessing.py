@@ -1,6 +1,7 @@
 import logging
 
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 import numpy as np
 import pandas as pd
 
@@ -15,6 +16,7 @@ def create_train_test(
         ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Create train and test dataset from the combination of orginal and synthetic ones.
+    Standard scaling fit on X_train and only applied on X_test.
 
     Args:
         df_real (pd.DataFrame): the original dataset
@@ -33,5 +35,10 @@ def create_train_test(
         train_size=train_size,
         random_state=random_state
     )
+
+    scaler = StandardScaler()
+
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
     return X_train, X_test, y_train, y_test
