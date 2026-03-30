@@ -34,7 +34,7 @@ def main():
                 writer = pq.ParquetWriter(NEW_PATH, batch.schema, compression='snappy')
 
             writer.write_table(pa.Table.from_batches([batch]))
-            print("50 000 lignes traitées...")
+            print("50 000 lines have been treated...")
 
         if writer:
             writer.close()
