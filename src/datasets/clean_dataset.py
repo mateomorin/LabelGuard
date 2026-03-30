@@ -1,5 +1,8 @@
 """
-Correct the format of the .parquet dataset so that it can be read by duckdb.
+Clean the dataset to remove several kinds of labels:
+  - Truncated ones (of length 141 and 161)
+  - Those including numbers
+  - 
 """
 
 import os
@@ -11,8 +14,8 @@ import s3fs
 
 def main():
 
-    OLD_PATH = 's3://mateom/graal/embeddings/NAF2025/original_train.parquet'
-    NEW_PATH = 's3://mateom/graal/embeddings/NAF2025/original_train_corrected.parquet'
+    OLD_PATH = 's3://mateom/graal/embeddings/NAF2025/original_train_corrected.parquet'
+    NEW_PATH = 's3://mateom/graal/embeddings/NAF2025/original_train_cleaned.parquet'
 
     fs = s3fs.S3FileSystem(
         client_kwargs={'endpoint_url': 'https://'+'minio.lab.sspcloud.fr'},

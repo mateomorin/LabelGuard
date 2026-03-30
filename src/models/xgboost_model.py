@@ -1,5 +1,5 @@
 import mlflow
-import mlflow.sklearn
+import mlflow.xgboost
 
 from .model_interface import BaseModel
 
@@ -23,7 +23,7 @@ class SklearnModel(BaseModel):
         Upload to MLFlow.
         """
 
-        mlflow.sklearn.log_model(
+        mlflow.xgboost.log_model(
             sk_model=self.model,
             name=name,
         )
@@ -34,6 +34,6 @@ class SklearnModel(BaseModel):
         Download from MLFlow.
         """
 
-        model = mlflow.sklearn.load_model(model_uri)
+        model = mlflow.xgboost.load_model(model_uri)
 
         return model
