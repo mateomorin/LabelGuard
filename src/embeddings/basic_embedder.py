@@ -4,7 +4,7 @@ import numpy as np
 from .embedding_interface import Embedder
 
 
-class OpenAIEmbedder(Embedder):
+class BasicEmbedder(Embedder):
     """
     Made for infering.
     """
@@ -20,7 +20,7 @@ class OpenAIEmbedder(Embedder):
         )
         self.model = model
 
-    def embed(self, texts: np.ndarray) -> np.ndarray:
+    def embed(self, texts: list[str]) -> np.ndarray:
 
         embeddings = []
 
