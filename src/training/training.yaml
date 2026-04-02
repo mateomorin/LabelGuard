@@ -1,0 +1,40 @@
+random_state: 42
+
+data:
+  real_path: "s3://mateom/graal/embeddings/NAF2025/original_train_cleaned.parquet"
+  synth_path: "s3://mateom/graal/embeddings/NAF2025/2026-03-16_gemma_synth.parquet"
+  n_samples: 1000
+  train_size: 0.8
+
+model:
+  name: mlp
+  logreg:
+    C: 1
+    solver: sag
+    max_iter: 10000
+  svm:
+    C: 1
+    max_iter: 100000
+  mlp:
+    input_dim: 4096
+    hidden_layers: [128, 32, 8]
+    loss_fn:
+      _target_: torch.nn.BCEWithLogitsLoss
+    activation:
+      _target_: torch.nn.ReLU
+    lr: 0.001
+    device: "cpu"
+    epochs: 10
+    batch_size: 32
+  xgboost:
+    n_estimators: 0
+    learning_rate: 0.001
+    max_depth: 2
+    min_split_loss: 0
+    subsample: 0.7
+    colsample_bytree: 0.3
+
+export:
+  save_results: false
+  train_path: null
+  eval_path: null

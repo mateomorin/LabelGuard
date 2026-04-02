@@ -7,8 +7,8 @@ import s3fs
 import hydra
 from omegaconf import DictConfig
 import mlflow
-from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 import pandas as pd
+import torch
 
 from src.datasets import data_importation, data_preprocessing, data_exportation
 from src.models import model_factory
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 load_dotenv(override=True)
 
 
-@hydra.main(version_base=None, config_path="../configs", config_name="training")
+@hydra.main(version_base=None, config_path="", config_name="training")
 def main(cfg: DictConfig):
     fs = s3fs.S3FileSystem(
         client_kwargs={'endpoint_url': 'https://'+'minio.lab.sspcloud.fr'},
@@ -26,6 +26,9 @@ def main(cfg: DictConfig):
         secret=os.environ["AWS_SECRET_ACCESS_KEY"],
         token=os.environ["AWS_SESSION_TOKEN"]
     )
+
+    if cfg["random_state"]:
+        torch.manual_seed(cfg["random_state"])
 
     with mlflow.start_run():
         # ==============================
@@ -66,44 +69,41 @@ def main(cfg: DictConfig):
         # ==============================
         logger.info("Training...")
 
-        model.fit(X_train, y_train)
-
-        # ==============================
-        #           Evaluation
-        # ==============================
-        logger.info("Evaluation:")
-        y_train_pred = model.predict(X_train)
-        y_eval_pred = model.predict(X_eval)
-
-        training_accuracy = accuracy_score(y_true=y_train, y_pred=y_train_pred)
-        training_f1 = f1_score(y_true=y_train, y_pred=y_train_pred)
-        training_cfm = confusion_matrix(y_true=y_train, y_pred=y_train_pred)
-
-        logger.info("Training dataset:")
-        logger.info(f"Accuracy: {training_accuracy}")
-        logger.info(f"F1 score: {training_f1}")
-        logger.info(f"Confusion Matrix: {training_cfm}")
-
-        eval_accuracy = accuracy_score(y_true=y_eval, y_pred=y_eval_pred)
-        eval_f1 = f1_score(y_true=y_eval, y_pred=y_eval_pred)
-        eval_cfm = confusion_matrix(y_true=y_eval, y_pred=y_eval_pred)
-
-        logger.info("Evaluation dataset:")
-        logger.info(f"Accuracy: {eval_accuracy}")
-        logger.info(f"F1 score: {eval_f1}")
-        logger.info(f"Confusion Matrix: {eval_cfm}")
+        model.fit(X_train, y_train, X_eval, y_eval)
 
         # ==============================
         #        MLFlow logging
         # ==============================
+        logger.info("Logging to MLFlow...")
 
-        model.save(name=cfg["name"])
+        # model
+        model.save(name=cfg["model"]["name"])
         mlflow.log_params(params=model.get_params())
+
+        # data
+        mlflow.log_params(params=cfg["data"])
+
+        # seed
+        mlflow.log_param("random_state", cfg["random_state"])
+
+        # metrics
+        metrics = model.get_metrics()
+        for k, v in metrics.items():
+            print(k, v)
+            # curves
+            if isinstance(v, list):
+                for step, loss in enumerate(v):
+                    mlflow.log_metric(k, loss, step=step)
+
+            # scalars
+            else:
+                mlflow.log_metric(k, v)
 
         # ==============================
         #       Data Exportation
         # ==============================
         if cfg["export"]["save_results"]:
+            logger.info("Exporting data...")
             data_exportation.export_data(
                 fs=fs,
                 path=cfg["export"]["train_path"],
@@ -114,3 +114,7 @@ def main(cfg: DictConfig):
                 path=cfg["export"]["eval_path"],
                 texts=pd.concat([df_real["label"], df_synth["label"]]).iloc[indices_eval].to_list()
             )
+
+
+if __name__ == "__main__":
+    main()

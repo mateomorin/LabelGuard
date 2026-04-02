@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 class BaseModel(ABC):
 
     @abstractmethod
-    def fit(self, X, y):
+    def fit(self, X_train, y_train):
         pass
 
     @abstractmethod
@@ -17,6 +17,10 @@ class BaseModel(ABC):
 
     @abstractmethod
     def get_params(self):
+        pass
+
+    @abstractmethod
+    def get_metrics(self):
         pass
 
     @abstractmethod

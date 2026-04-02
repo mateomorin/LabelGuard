@@ -1,6 +1,9 @@
 # Personnal
 sensitive_notebooks/
 
+# Hydra
+outputs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

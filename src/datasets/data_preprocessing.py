@@ -27,7 +27,7 @@ def create_train_test(
 
     X = pd.concat([df_real["embedding"], df_synth["embedding"]]).values
     X = np.vstack(X)
-    y = np.append(np.zeros(len(df_real)), np.ones(len(df_synth))).reshape(-1, 1)
+    y = np.append(np.zeros(len(df_real)), np.ones(len(df_synth)))
     indices = np.arange(len(X))
 
     X_train, X_test, y_train, y_test, indices_train, indices_test = train_test_split(
