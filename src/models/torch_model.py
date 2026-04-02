@@ -44,6 +44,7 @@ class TorchMLPClassifier(BaseModel):
             loss_fn=None,
             optimizer_cls=None,
             lr=1e-3,
+            activation=nn.ReLU,
             device=None,
             ):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -52,6 +53,7 @@ class TorchMLPClassifier(BaseModel):
         self.model = MLP(
             input_dim=input_dim,
             hidden_layers=hidden_layers,
+            activation=activation
         ).to(self.device)
 
         # loss
@@ -64,9 +66,10 @@ class TorchMLPClassifier(BaseModel):
             lr=lr,
         )
 
-    # ======================
-    # TRAIN
-    # ======================
+        self.input_dim = input_dim
+        self.hidden_layers = hidden_layers
+        self.activation = activation
+        self.lr = lr
 
     def fit(self, X, y, epochs=10, batch_size=32):
         self.model.train()
@@ -102,9 +105,6 @@ class TorchMLPClassifier(BaseModel):
             epoch_loss /= len(loader.dataset)
             print(f"Epoch {epoch+1}/{epochs} - loss: {epoch_loss:.4f}")
 
-    # ======================
-    # PREDICT
-    # ======================
     @torch.no_grad()
     def predict(self, X):
         self.model.eval()
@@ -115,9 +115,6 @@ class TorchMLPClassifier(BaseModel):
         probs = torch.sigmoid(logits)
         return (probs > 0.5).long().squeeze(1)
 
-    # ======================
-    # PREDICT PROBA
-    # ======================
     @torch.no_grad()
     def predict_proba(self, X):
         self.model.eval()
@@ -128,9 +125,18 @@ class TorchMLPClassifier(BaseModel):
         probs = torch.sigmoid(logits)
         return torch.cat([probs], dim=1)
 
-    # ======================
-    # SAVE
-    # ======================
+    def get_params(self):
+        params = {
+            "input_dim": self.input_dim,
+            "hidden_layers": self.hidden_layers,
+            "loss_fn": self.loss_fn,
+            "optimizer_cls": self.optimizer_cls,
+            "activation": self.activation,
+            "lr": self.lr
+        }
+
+        return params
+
     def save(self, artifact_path: str = "model"):
         """
         Upload to MLFlow.

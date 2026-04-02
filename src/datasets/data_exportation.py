@@ -3,17 +3,19 @@ import numpy as np
 import pandas as pd
 
 
-def export_data(
+def save_results(
     fs: s3fs.S3FileSystem,
     path: str,
     texts: list[str],
-    prediction: np.ndarray
+    prediction: np.ndarray,
+    true_labels: np.ndarray
 ) -> bool:
 
     df = pd.Dataframe(
         {
-            "label": texts,
-            "prediction": prediction
+            "texts": texts,
+            "prediction": prediction,
+            "true_labels": true_labels
         }
     )
 

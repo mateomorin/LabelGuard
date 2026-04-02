@@ -83,7 +83,7 @@ def fetch_original_data(
     con.register("selected_ids", selected_ids)
 
     query = f"""
-    SELECT t.code, t.embedding
+    SELECT t.code, t.label, t.embedding
     FROM (
         SELECT *,
             ROW_NUMBER() OVER (ORDER BY code) AS row_id
@@ -151,7 +151,7 @@ def select_synthetic_data(
     con.register("selected_ids", all_row_ids[["row_id"]])
 
     query = f"""
-    SELECT t.code, t.embedding
+    SELECT t.code, t.label, t.embedding
     FROM (
         SELECT *,
             ROW_NUMBER() OVER (ORDER BY code) AS row_id

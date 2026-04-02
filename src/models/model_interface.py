@@ -16,6 +16,10 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
+    def get_params(self):
+        pass
+
+    @abstractmethod
     def save(self, path: str):
         pass
 

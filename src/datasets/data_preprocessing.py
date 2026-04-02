@@ -28,10 +28,12 @@ def create_train_test(
     X = pd.concat([df_real["embedding"], df_synth["embedding"]]).values
     X = np.vstack(X)
     y = np.append(np.zeros(len(df_real)), np.ones(len(df_synth))).reshape(-1, 1)
+    indices = np.arange(len(X))
 
-    X_train, X_test, y_train, y_test = train_test_split(
+    X_train, X_test, y_train, y_test, indices_train, indices_test = train_test_split(
         X,
         y,
+        indices,
         train_size=train_size,
         random_state=random_state
     )
@@ -41,4 +43,4 @@ def create_train_test(
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    return X_train, X_test, y_train, y_test
+    return X_train, X_test, y_train, y_test, indices_train, indices_test

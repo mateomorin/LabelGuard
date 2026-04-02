@@ -1,12 +1,13 @@
 import mlflow
 import mlflow.sklearn
+from sklearn.base import BaseEstimator
 
 from .model_interface import BaseModel
 
 
 class SklearnModel(BaseModel):
 
-    def __init__(self, model):
+    def __init__(self, model: BaseEstimator):
         self.model = model
 
     def fit(self, X, y):
@@ -17,6 +18,9 @@ class SklearnModel(BaseModel):
 
     def predict_proba(self, X):
         return self.model.predict_proba(X)[:, 1].reshape(-1, 1)
+
+    def get_params(self):
+        return self.model.get_params()
 
     def save(self, name: str = "model"):
         """
