@@ -4,6 +4,9 @@ sensitive_notebooks/
 # Hydra
 outputs/
 
+# duckdb
+.tmp/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
