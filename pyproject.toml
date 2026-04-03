@@ -1,3 +1,8 @@
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
+
 [project]
 name = "labelguard"
 version = "0.1.0"
@@ -10,6 +15,7 @@ dependencies = [
     "mlflow>=3.10.1",
     "openai>=2.30.0",
     "pandas>=2.3.3",
+    "pytest>=9.0.2",
     "python-dotenv>=1.2.2",
     "s3fs>=2026.2.0",
     "scikit-learn>=1.8.0",
