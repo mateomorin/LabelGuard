@@ -8,6 +8,13 @@ CON = duckdb.connect()
 RNG = np.random.default_rng()
 REAL_PATH = "s3://mateom/graal/embeddings/NAF2025/original_train_cleaned.parquet"
 SYNTH_PATH = "s3://mateom/graal/embeddings/NAF2025/2026-03-16_gemma_synth.parquet"
+CODE_LIST = CON.execute(
+    f"""
+    SELECT DISTINCT(code)
+    FROM read_parquet('{REAL_PATH}')
+    ORDER BY code
+    """
+).df()["code"].to_list()
 
 
 def test_get_n_codes():
@@ -34,6 +41,16 @@ def test_original_data_sampling():
     CON.register("selected_ids_2", selected_ids_2)
     sampled_df_2 = data_importation.retrieve_matching_rows(CON, REAL_PATH, "selected_ids_2")
 
+    # Attributes
+    assert "code" in sampled_df_1.columns, "No column code in final sample"
+    assert "label" in sampled_df_1.columns, "No column label in final sample"
+    assert "embedding" in sampled_df_1.columns, "No column embedding in final sample"
+
+    # Exhaustivity
+    code_list_1 = np.sort(sampled_df_1["code"].unique())
+    assert np.array_equal(code_list_1, np.array(CODE_LIST)), "No exhaustivity in final sample"
+
+    # RNG
     assert n_rows_1 == n_rows_2, "Issue on row counting"
     assert np.array_equal(selected_ids_1, selected_ids_2), "Issue on RNG for exhaustive sampling"
     assert np.array_equal(final_ids_1, final_ids_2), "Issue on RNG for remaining sampling"
@@ -41,15 +58,19 @@ def test_original_data_sampling():
 
 
 def test_sample_code_equivalents():
-    code_list = CON.execute(
-        f"""
-        SELECT DISTINCT(code)
-        FROM read_parquet('{REAL_PATH}')
-        ORDER BY code
-        """
-    ).df()["code"].to_list()
+    # Single sampling
+    code_counts = Counter(CODE_LIST)
 
-    code_counts = Counter(code_list)
+    rng = np.random.default_rng(1)
+    all_row_ids_1 = data_importation.sample_code_equivalents(CON, SYNTH_PATH, rng, code_counts)
+
+    rng = np.random.default_rng(1)
+    all_row_ids_2 = data_importation.sample_code_equivalents(CON, SYNTH_PATH, rng, code_counts)
+
+    assert all_row_ids_1.equals(all_row_ids_2), "Issue on RNG for code equivalent single sampling"
+
+    # Multiple sampling
+    code_counts = Counter(CODE_LIST * 3)
 
     rng = np.random.default_rng(1)
     all_row_ids_1 = data_importation.sample_code_equivalents(CON, SYNTH_PATH, rng, code_counts)

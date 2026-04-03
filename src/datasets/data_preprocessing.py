@@ -9,11 +9,11 @@ logger = logging.getLogger(__name__)
 
 
 def create_train_test(
-        df_real: pd.DataFrame,
-        df_synth: pd.DataFrame,
-        train_size: float,
-        random_state: int
-        ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    df_real: pd.DataFrame,
+    df_synth: pd.DataFrame,
+    train_size: float,
+    random_state: int = None
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Create train and test dataset from the combination of orginal and synthetic ones.
     Standard scaling fit on X_train and only applied on X_test.

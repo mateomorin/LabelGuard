@@ -151,7 +151,7 @@ def select_synthetic_data(
     random_state: int
 ) -> pd.DataFrame:
     """
-    Fetch the synthetic parquet dataset with columns ["code", "embedding"] from s3.
+    Fetch the synthetic parquet dataset with columns ["code", "label", "embedding"] from s3.
     Sample it with replacement according to the distribution of codes in code_list.
 
     args:
