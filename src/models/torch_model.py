@@ -13,11 +13,11 @@ class MLP(nn.Module):
     Dynamicaly configurable MLP with output_dim=1.
     """
     def __init__(
-            self,
-            input_dim: int,
-            hidden_layers: list[int],
-            activation=nn.ReLU
-            ):
+        self,
+        input_dim: int,
+        hidden_layers: list[int],
+        activation=nn.ReLU
+    ):
         super().__init__()
 
         layers = []
@@ -39,16 +39,16 @@ class MLP(nn.Module):
 class TorchMLPClassifier(BaseModel):
 
     def __init__(
-            self,
-            input_dim: int,
-            hidden_layers: list = [64, 32],
-            loss_fn=None,
-            lr=1e-3,
-            activation=nn.ReLU(),
-            device=None,
-            epochs: int = 10,
-            batch_size: int = 32
-            ):
+        self,
+        input_dim: int,
+        hidden_layers: list = [64, 32],
+        loss_fn=None,
+        lr=1e-3,
+        activation=nn.ReLU(),
+        device=None,
+        epochs: int = 10,
+        batch_size: int = 32
+    ):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
         # model
@@ -150,7 +150,7 @@ class TorchMLPClassifier(BaseModel):
                 self.metrics["eval_loss"].append(eval_loss)
 
             print(
-                f"Epoch {epoch+1}/{self.epochs} "
+                f"Epoch {epoch + 1}/{self.epochs} "
                 f"- train_loss: {epoch_loss:.4f}"
                 + (f" - eval_loss: {eval_loss:.4f}" if eval_loss else "")
             )

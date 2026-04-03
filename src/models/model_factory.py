@@ -1,5 +1,5 @@
 from sklearn.linear_model import LogisticRegression
-from sklearn.svm import LinearSVC
+from sklearn.svm import SVC
 from hydra.utils import instantiate
 
 from .sklearn_model import SklearnModel
@@ -27,10 +27,12 @@ def build_model(cfg):
     elif name == "svm":
         svm_cfg = cfg["model"]["svm"]
         model = SklearnModel(
-            LinearSVC(
+            SVC(
                 C=svm_cfg["C"] or 1.0,
                 random_state=cfg["random_state"],
-                max_iter=svm_cfg["max_iter"] or 1000
+                max_iter=svm_cfg["max_iter"] or 1000,
+                kernel="linear",
+                probability=True
             )
         )
 

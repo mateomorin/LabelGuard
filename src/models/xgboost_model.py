@@ -9,15 +9,15 @@ from .model_interface import BaseModel
 class XGBoostModel(BaseModel):
 
     def __init__(
-            self,
-            n_estimators: int = 10,
-            learning_rate: float = 0.5,
-            max_depth: int = 2,
-            min_split_loss: float = 0,
-            subsample: float = 0.7,
-            colsample_bytree: float = 0.3,
-            random_state: int = None
-            ):
+        self,
+        n_estimators: int = 10,
+        learning_rate: float = 0.5,
+        max_depth: int = 2,
+        min_split_loss: float = 0,
+        subsample: float = 0.7,
+        colsample_bytree: float = 0.3,
+        random_state: int = None
+    ):
 
         self.model = xgb.XGBClassifier(
             n_estimators=n_estimators,
