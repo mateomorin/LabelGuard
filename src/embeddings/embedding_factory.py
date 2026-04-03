@@ -11,7 +11,7 @@ def build_embedding(cfg):
 
     if embed_type == "async":
         embedder = AsyncEmbedder(
-            base_url=os.environ["EMBEDDING_API_URL"],
+            base_url=os.environ["EMBEDDING_API_BASE_URL"],
             model=model,
             api_key=os.environ["EMBEDDING_API_KEY"]
         )
@@ -20,7 +20,7 @@ def build_embedding(cfg):
 
     elif embed_type == "basic":
         embedder = BasicEmbedder(
-            base_url=os.environ["EMBEDDING_API_URL"],
+            base_url=os.environ["EMBEDDING_API_BASE_URL"],
             model=model,
             api_key=os.environ["EMBEDDING_API_KEY"]
         )
