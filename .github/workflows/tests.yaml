@@ -10,9 +10,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
       EMBEDDING_API_BASE_URL: ${{ secrets.EMBEDDING_API_BASE_URL }}
       EMBEDDING_API_KEY: ${{ secrets.EMBEDDING_API_KEY }}
 
@@ -31,5 +28,11 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Run tests
-        run: uv run pytest
+      - name: Run data tests    # No data importation from s3 because timeout
+        run: uv run pytest tests/datasets/test_data_preprocessing.py
+
+      - name: Run embedding tests
+        run : uv run pytest tests/test_embedders.py
+
+      - name: Run model tests
+        run : uv run pytest tests/test_models.py
