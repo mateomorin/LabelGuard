@@ -27,7 +27,8 @@ class XGBoostModel(BaseModel):
             seed=random_state,
             subsample=subsample,
             colsample_bytree=colsample_bytree,
-            random_state=random_state
+            random_state=random_state,
+            eval_metric="logloss"
         )
 
     def fit(self, X_train, y_train, X_eval=None, y_eval=None):
@@ -46,7 +47,6 @@ class XGBoostModel(BaseModel):
             X_train,
             y_train,
             eval_set=eval_set,
-            eval_metric="logloss",
             verbose=False
         )
 
@@ -102,6 +102,9 @@ class XGBoostModel(BaseModel):
 
     def get_params(self):
         return self.model.get_params()
+
+    def get_metrics(self):
+        return self.metrics
 
     def save(self, name: str = "model"):
         """

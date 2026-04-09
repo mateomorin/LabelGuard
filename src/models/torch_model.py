@@ -88,12 +88,12 @@ class TorchMLPClassifier(BaseModel):
         # =========================
         #          Device
         # =========================
-        X_train = torch.from_numpy(X_train).to(self.device)
-        y_train = torch.from_numpy(y_train).float().unsqueeze(1).to(self.device)
+        X_train = torch.from_numpy(X_train).to(torch.float32).to(self.device)
+        y_train = torch.from_numpy(y_train).float().unsqueeze(1).to(torch.float32).to(self.device)
 
         if X_eval is not None:
-            X_eval = torch.from_numpy(X_eval).to(self.device)
-            y_eval = torch.from_numpy(y_eval).float().unsqueeze(1).to(self.device)
+            X_eval = torch.from_numpy(X_eval).to(torch.float32).to(self.device)
+            y_eval = torch.from_numpy(y_eval).unsqueeze(1).to(torch.float32).to(self.device)
 
         # =========================
         #     Dataset / Loader
@@ -171,7 +171,7 @@ class TorchMLPClassifier(BaseModel):
 
             acc = accuracy_score(y_true, y_pred)
             f1 = f1_score(y_true, y_pred)
-            cfm = str(confusion_matrix(y_true, y_pred))
+            cfm = confusion_matrix(y_true, y_pred)
 
             return acc, f1, cfm
 
@@ -205,7 +205,7 @@ class TorchMLPClassifier(BaseModel):
     def predict(self, X):
         self.model.eval()
 
-        X = torch.from_numpy(X).to(self.device)
+        X = torch.from_numpy(X).to(torch.float32).to(self.device)
         logits = self.model(X)
 
         probs = torch.sigmoid(logits)
@@ -215,7 +215,7 @@ class TorchMLPClassifier(BaseModel):
     def predict_proba(self, X):
         self.model.eval()
 
-        X = torch.from_numpy(X).to(self.device)
+        X = torch.from_numpy(X).to(torch.float32).to(self.device)
         logits = self.model(X)
 
         probs = torch.sigmoid(logits)
