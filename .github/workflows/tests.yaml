@@ -1,0 +1,33 @@
+name: Run tests with pytest
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/astral-sh/uv:latest
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      EMBEDDING_API_BASE_URL: ${{ secrets.EMBEDDING_API_BASE_URL }}
+      EMBEDDING_API_KEY: ${{ secrets.EMBEDDING_API_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show uv version (debug)
+        run: uv --version
+
+      - name: Install dependencies with uv
+        run: uv sync
+
+      - name: Run tests
+        run: uv run pytest
