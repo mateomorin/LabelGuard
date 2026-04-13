@@ -2,7 +2,7 @@ from collections import Counter
 import duckdb
 import numpy as np
 import pandas as pd
-from datasets import data_importation
+from datasets.parquet import data_importation
 
 CON = duckdb.connect()
 RNG = np.random.default_rng()

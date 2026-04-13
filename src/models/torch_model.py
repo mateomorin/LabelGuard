@@ -45,11 +45,10 @@ class TorchMLPClassifier(BaseModel):
         loss_fn=None,
         lr=1e-3,
         activation=nn.ReLU(),
-        device=None,
         epochs: int = 10,
         batch_size: int = 32
     ):
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = ("cuda" if torch.cuda.is_available() else "cpu")
 
         # model
         self.model = MLP(

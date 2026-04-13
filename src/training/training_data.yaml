@@ -1,0 +1,11 @@
+random_state: 42
+
+data:
+  real_path: "s3://mateom/graal/embeddings/NAF2025/original_train_cleaned.parquet"
+  synth_path: "s3://mateom/graal/embeddings/NAF2025/2026-03-16_gemma_synth.parquet"
+  n_samples: 100000
+  train_size: 0.8
+
+export:
+  train_path: "s3://mateom/graal/embeddings/NAF2025/preprocessed/train.parquet"
+  eval_path: "s3://mateom/graal/embeddings/NAF2025/preprocessed/eval.parquet"

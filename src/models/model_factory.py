@@ -46,7 +46,6 @@ def build_model(cfg):
             loss_fn=instantiate(mlp_cfg["loss_fn"]),
             activation=instantiate(mlp_cfg["activation"]),
             lr=mlp_cfg["lr"],
-            device=mlp_cfg["device"],
             epochs=mlp_cfg["epochs"],
             batch_size=mlp_cfg["batch_size"]
         )

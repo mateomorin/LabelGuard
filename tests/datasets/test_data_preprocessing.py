@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from datasets import data_preprocessing
+from datasets.parquet import data_preprocessing
 
 DF_REAL = pd.DataFrame({
     "code": [i for i in range(5)],

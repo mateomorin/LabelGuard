@@ -1,7 +1,7 @@
+from collections import Counter
 import duckdb
 import pandas as pd
 import numpy as np
-from collections import Counter
 
 
 def get_n_codes(con, path):

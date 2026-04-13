@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: prep-data-
+spec:
+  entrypoint: prep-data
+  templates:
+    - name: prep-data
+      container:
+        image: inseefrlab/onyxia-vscode-python:py3.13.5
+        imagePullPolicy: Always
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            set -e
+            git clone -b main https://github.com/mateomorin/LabelGuard.git
+            cd LabelGuard
+            uv run python -m src.training.prepare_training_data
+        envFrom:
+          - secretRef:
+              name: s3-secret # Contient ACCESS_KEY, SECRET_KEY, etc.
+        env:
+          - name: AWS_S3_ENDPOINT
+            value: minio.lab.sspcloud.fr
