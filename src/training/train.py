@@ -1,13 +1,15 @@
 import logging
-from collections import Counter
+import os
 
 from dotenv import load_dotenv
 import hydra
 from omegaconf import DictConfig
 import mlflow
 import torch
+from qdrant_client import QdrantClient
 
 from src.models import model_factory
+from src.datasets.qdrant import data_importation
 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +24,21 @@ def main(cfg: DictConfig):
 
     mlflow.set_experiment("Discriminator")
 
-    X_train, X_eval, y_train, y_eval, indices_train, indices_eval = ...
+    client = QdrantClient(
+        url="http://qdrant:6333",
+        api_key=os.environ["QDRANT_API_KEY"],
+        timeout=120
+    )
+
+    X_train, y_train = data_importation.fetch_training_data(
+        client=client,
+        collection_name=cfg["qdrant"]["collection_train"]
+    )
+
+    X_eval, y_eval = data_importation.fetch_training_data(
+        client=client,
+        collection_name=cfg["qdrant"]["collection_test"]
+    )
 
     # ==============================
     #             Model

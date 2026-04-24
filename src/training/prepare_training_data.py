@@ -56,10 +56,14 @@ def main(cfg: DictConfig):
 
     data_exportation.export_points(
         client=client,
-        train_points=train_points,
-        test_points=test_points,
-        collection_train=cfg["qdrant"]["collection_train"],
-        collection_test=cfg["qdrant"]["collection_test"]
+        points=train_points,
+        collection_name=cfg["qdrant"]["collection_train"]
+    )
+
+    data_exportation.export_points(
+        client=client,
+        points=test_points,
+        collection_name=cfg["qdrant"]["collection_test"]
     )
 
 

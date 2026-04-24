@@ -1,5 +1,6 @@
 # Personnal
 sensitive_notebooks/
+training-data-workflow.yaml
 
 # Hydra
 outputs/

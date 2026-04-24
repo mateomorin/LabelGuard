@@ -164,3 +164,43 @@ def select_synthetic_points(
         )
 
     return selected_points
+
+
+def fetch_training_data(
+    client: QdrantClient,
+    collection_name: str,
+    size: int = None
+) -> tuple[np.ndarray, np.ndarray]:
+    if size is None:
+        size = MAX_POINTS_TO_RETRIEVE
+
+    all_embeddings = []
+    all_labels = []
+    count = 0
+
+    next_offset = None
+
+    while True:
+        response, next_offset = client.scroll(
+            collection_name=collection_name,
+            with_payload=True,
+            with_vectors=True,
+            limit=5000,
+            offset=next_offset
+        )
+
+        for record in response:
+            all_embeddings.append(record.vector)
+            all_labels.append(record.payload.get("is_synth", False))
+            count += 1
+
+        # Si next_offset est None, on a atteint la fin de la collection
+        if next_offset is None or count >= size:
+            all_embeddings = all_embeddings[:size]
+            all_labels = all_labels[:size]
+            break
+
+    X = np.array(all_embeddings, dtype='float32')
+    y = np.array(all_labels)
+
+    return X, y

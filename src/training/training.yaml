@@ -5,6 +5,12 @@ data:
   eval_path: "s3://mateom/graal/embeddings/NAF2025/preprocessed/eval.parquet"
   n_samples: "all"
 
+qdrant:
+  original_collection: "original_cleaned"
+  synth_collection: "naive_synth"
+  collection_train: "train_v1"
+  collection_test: "test_v1"
+
 model:
   name: mlp
   logreg:
