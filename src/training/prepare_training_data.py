@@ -5,7 +5,6 @@ from collections import Counter
 from dotenv import load_dotenv
 import hydra
 from omegaconf import DictConfig
-import pandas as pd
 from qdrant_client import QdrantClient
 
 from src.datasets.qdrant import data_importation, data_preprocessing, data_exportation
@@ -20,12 +19,12 @@ def main(cfg: DictConfig):
     client = QdrantClient(
         url="http://qdrant:6333",
         api_key=os.environ["QDRANT_API_KEY"],
-        timeout=30
+        timeout=120
     )
 
-    logger.info("Creating training dataset...")
+    logger.info("Importing original dataset...")
 
-    df_real = data_importation.fetch_original_points(
+    original_points = data_importation.fetch_original_points(
         client=client,
         collection_name=cfg["qdrant"]["original_collection"],
         size=cfg["data"]["n_samples"],
@@ -33,22 +32,36 @@ def main(cfg: DictConfig):
         random_state=cfg["random_state"]
     )
 
-    code_list = Counter(df_real["code"].to_list())
+    payloads = data_preprocessing.get_payloads(original_points)
+    code_list = Counter([payload["code"] for payload in payloads])
 
-    df_synth = data_importation.select_synthetic_data(
+    logger.info("Matching synthetic dataset...")
+
+    synthetic_points = data_importation.select_synthetic_points(
         client=client,
         collection_name=cfg["qdrant"]["synth_collection"],
         code_list=code_list,
         random_state=cfg["random_state"]
     )
 
-    X_train, X_eval, y_train, y_eval, indices_train, indices_eval = data_preprocessing.create_train_test(
-        df_real=df_real,
-        df_synth=df_synth,
+    logger.info("Creating train test...")
+    train_points, test_points = data_preprocessing.create_train_test(
+        points_real=original_points,
+        points_synth=synthetic_points,
         train_size=cfg["data"]["train_size"],
         random_state=cfg["random_state"]
     )
 
     logger.info("Exporting data...")
-    
-    df_train = 
+
+    data_exportation.export_points(
+        client=client,
+        train_points=train_points,
+        test_points=test_points,
+        collection_train=cfg["qdrant"]["collection_train"],
+        collection_test=cfg["qdrant"]["collection_test"]
+    )
+
+
+if __name__ == "__main__":
+    main()

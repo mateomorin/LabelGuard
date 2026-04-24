@@ -1,6 +1,8 @@
+import logging
 from qdrant_client import QdrantClient
 import numpy as np
 
+logger = logging.getLogger(__name__)
 MAX_POINTS_TO_RETRIEVE = 1000000
 
 
@@ -123,6 +125,10 @@ def fetch_original_points(
 
     remaining_size = size - len(exhaustive_points)
 
+    if remaining_size < 0:
+        logger.warning(f"Insufficiant size, upgrading to {len(exhaustive_points)} for exhaustivity")
+        return exhaustive_points
+
     remaining_points = select_random_points(
         client=client,
         collection_name=collection_name,
@@ -133,7 +139,7 @@ def fetch_original_points(
     return exhaustive_points + remaining_points
 
 
-def select_synthetic_data(
+def select_synthetic_points(
     client: QdrantClient,
     collection_name: str,
     code_list: list,

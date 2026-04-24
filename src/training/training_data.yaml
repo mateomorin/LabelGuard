@@ -5,7 +5,14 @@ data:
   synth_path: "s3://mateom/graal/embeddings/NAF2025/2026-03-16_gemma_synth.parquet"
   n_samples: 100000
   train_size: 0.8
+  min_size_per_code: 5
 
 export:
   train_path: "s3://mateom/graal/embeddings/NAF2025/preprocessed/train.parquet"
   eval_path: "s3://mateom/graal/embeddings/NAF2025/preprocessed/eval.parquet"
+
+qdrant:
+  original_collection: "original_cleaned"
+  synth_collection: "naive_synth"
+  collection_train: "train_v1"
+  collection_test: "test_v1"
