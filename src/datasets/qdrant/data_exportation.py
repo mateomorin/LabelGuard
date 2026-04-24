@@ -1,8 +1,32 @@
 import logging
 from qdrant_client import QdrantClient
+from qdrant_client.http import models
 
 logger = logging.getLogger(__name__)
 BATCH_SIZE = 100
+
+
+def create_collection_if_not_exists(
+    client: QdrantClient,
+    collection_name: str,
+    vector_size: int = 4096
+):
+    """Vérifie l'existence d'une collection et la crée si nécessaire."""
+    # On récupère la liste des collections existantes
+    collections = client.get_collections().collections
+    exists = any(c.name == collection_name for c in collections)
+
+    if not exists:
+        logger.info(f"Creating collection '{collection_name}'...")
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=models.VectorParams(
+                size=vector_size,
+                distance=models.Distance.COSINE         # Ou DOT / EUCLID selon votre modèle
+            ),
+        )
+    else:
+        logger.info(f"Collection '{collection_name}' already exists. Skipping creation.")
 
 
 def export_points(

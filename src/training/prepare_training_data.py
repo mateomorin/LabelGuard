@@ -52,6 +52,16 @@ def main(cfg: DictConfig):
         random_state=cfg["random_state"]
     )
 
+    logger.info("Creating collections")
+    data_exportation.create_collection_if_not_exists(
+        client=client,
+        collection_name=cfg["qdrant"]["collection_train"]
+    )
+    data_exportation.create_collection_if_not_exists(
+        client=client,
+        collection_name=cfg["qdrant"]["collection_test"]
+    )
+
     logger.info("Exporting data...")
 
     data_exportation.export_points(
