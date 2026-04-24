@@ -125,7 +125,6 @@ def test_mlp():
         loss_fn=None,
         lr=1e-3,
         activation=torch.nn.ReLU(),
-        device=None,
         epochs=10,
         batch_size=32
     )
