@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 from qdrant_client import QdrantClient
 import numpy as np
 
@@ -169,10 +170,12 @@ def select_synthetic_points(
 def fetch_training_data(
     client: QdrantClient,
     collection_name: str,
-    size: int = None
+    n_samples: Union[int, str] = "all"
 ) -> tuple[np.ndarray, np.ndarray]:
-    if size is None:
-        size = MAX_POINTS_TO_RETRIEVE
+    if n_samples == "all":
+        n_samples = MAX_POINTS_TO_RETRIEVE
+
+    assert isinstance(n_samples, int), TypeError("Provide a numerical value for n_samples, or set it to 'all'")
 
     all_embeddings = []
     all_labels = []
@@ -195,9 +198,9 @@ def fetch_training_data(
             count += 1
 
         # Si next_offset est None, on a atteint la fin de la collection
-        if next_offset is None or count >= size:
-            all_embeddings = all_embeddings[:size]
-            all_labels = all_labels[:size]
+        if next_offset is None or count >= n_samples:
+            all_embeddings = all_embeddings[:n_samples]
+            all_labels = all_labels[:n_samples]
             break
 
     X = np.array(all_embeddings, dtype='float32')

@@ -107,7 +107,6 @@ def test_mlp():
     model_1 = TorchMLPClassifier(
         input_dim=X.shape[1],
         hidden_layers=[12, 6],
-        loss_fn=None,
         lr=1e-3,
         activation=torch.nn.ReLU(),
         epochs=10,
@@ -121,7 +120,6 @@ def test_mlp():
     model_2 = TorchMLPClassifier(
         input_dim=X.shape[1],
         hidden_layers=[12, 6],
-        loss_fn=None,
         lr=1e-3,
         activation=torch.nn.ReLU(),
         epochs=10,
@@ -137,7 +135,6 @@ def test_mlp():
     model = TorchMLPClassifier(
         input_dim=X.shape[1],
         hidden_layers=[12, 6],
-        loss_fn=None,
         lr=1e-3,
         activation=torch.nn.ReLU(),
         epochs=10,

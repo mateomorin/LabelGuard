@@ -117,11 +117,11 @@ class XGBoostModel(BaseModel):
         )
 
     @classmethod
-    def load(cls, model_uri: str):
+    def load(cls, path: str):
         """
         Download from MLFlow.
         """
 
-        model = mlflow.xgboost.load_model(model_uri)
+        model = mlflow.xgboost.load_model(path)
 
         return model

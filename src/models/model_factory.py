@@ -43,11 +43,11 @@ def build_model(cfg):
         model = TorchMLPClassifier(
             input_dim=mlp_cfg["input_dim"],
             hidden_layers=mlp_cfg["hidden_layers"],
-            loss_fn=instantiate(mlp_cfg["loss_fn"]),
             activation=instantiate(mlp_cfg["activation"]),
             lr=mlp_cfg["lr"],
             epochs=mlp_cfg["epochs"],
-            batch_size=mlp_cfg["batch_size"]
+            batch_size=mlp_cfg["batch_size"],
+            patience=mlp_cfg["patience"]
         )
 
         return model

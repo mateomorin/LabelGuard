@@ -1,15 +1,11 @@
 random_state: 42
 
-data:
-  train_path: "s3://mateom/graal/embeddings/NAF2025/preprocessed/train.parquet"
-  eval_path: "s3://mateom/graal/embeddings/NAF2025/preprocessed/eval.parquet"
-  n_samples: "all"
-
 qdrant:
   original_collection: "original_cleaned"
   synth_collection: "naive_synth"
   collection_train: "train_v1"
   collection_test: "test_v1"
+  n_samples: 5000
 
 model:
   name: mlp
@@ -23,13 +19,12 @@ model:
   mlp:
     input_dim: 4096
     hidden_layers: [128, 32, 8]
-    loss_fn:
-      _target_: torch.nn.BCEWithLogitsLoss
     activation:
       _target_: torch.nn.ReLU
     lr: 0.001
-    epochs: 10
+    epochs: 20
     batch_size: 32
+    patience: 3
   xgboost:
     n_estimators: 5
     learning_rate: 0.001

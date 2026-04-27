@@ -1,6 +1,7 @@
 # Personnal
 sensitive_notebooks/
 training-data-workflow.yaml
+lightning_logs/
 
 # Hydra
 outputs/

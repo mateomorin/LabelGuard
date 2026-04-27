@@ -24,7 +24,7 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def save(self, path: str):
+    def save(self, name: str):
         pass
 
     @classmethod

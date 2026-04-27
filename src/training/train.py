@@ -22,65 +22,69 @@ def main(cfg: DictConfig):
     if cfg["random_state"]:
         torch.manual_seed(cfg["random_state"])
 
-    mlflow.set_experiment("Discriminator")
+    mlflow.set_experiment("LabelGuard")
 
-    client = QdrantClient(
-        url="http://qdrant:6333",
-        api_key=os.environ["QDRANT_API_KEY"],
-        timeout=120
-    )
+    with mlflow.start_run():
 
-    X_train, y_train = data_importation.fetch_training_data(
-        client=client,
-        collection_name=cfg["qdrant"]["collection_train"]
-    )
+        client = QdrantClient(
+            url="http://qdrant:6333",
+            api_key=os.environ["QDRANT_API_KEY"],
+            timeout=120
+        )
 
-    X_eval, y_eval = data_importation.fetch_training_data(
-        client=client,
-        collection_name=cfg["qdrant"]["collection_test"]
-    )
+        X_train, y_train = data_importation.fetch_training_data(
+            client=client,
+            collection_name=cfg["qdrant"]["collection_train"],
+            n_samples=cfg["qdrant"]["n_samples"]
+        )
 
-    # ==============================
-    #             Model
-    # ==============================
-    logger.info("Building the desired model...")
+        X_eval, y_eval = data_importation.fetch_training_data(
+            client=client,
+            collection_name=cfg["qdrant"]["collection_test"],
+            n_samples=cfg["qdrant"]["n_samples"]
+        )
 
-    model = model_factory.build_model(cfg)
+        # ==============================
+        #             Model
+        # ==============================
+        logger.info("Building the desired model...")
 
-    # ==============================
-    #            Training
-    # ==============================
-    logger.info("Training...")
+        model = model_factory.build_model(cfg)
 
-    model.fit(X_train, y_train, X_eval, y_eval)
+        # ==============================
+        #            Training
+        # ==============================
+        logger.info("Training...")
 
-    # ==============================
-    #        MLFlow logging
-    # ==============================
-    logger.info("Logging to MLFlow...")
+        model.fit(X_train, y_train, X_eval, y_eval)
 
-    # model
-    model.save(name=cfg["model"]["name"])
-    mlflow.log_params(params=model.get_params())
+        # ==============================
+        #        MLFlow logging
+        # ==============================
+        logger.info("Logging to MLFlow...")
 
-    # data
-    mlflow.log_params(params=cfg["data"])
+        # model
+        model.save(name=cfg["model"]["name"])
+        mlflow.log_params(params=model.get_params())
 
-    # seed
-    mlflow.log_param("random_state", cfg["random_state"])
+        # data
+        mlflow.log_params(params=cfg["qdrant"])
 
-    # metrics
-    metrics = model.get_metrics()
-    for k, v in metrics.items():
-        print(k, v)
-        # curves
-        if isinstance(v, list):
-            for step, loss in enumerate(v):
-                mlflow.log_metric(k, loss, step=step)
+        # seed
+        mlflow.log_param("random_state", cfg["random_state"])
 
-        # scalars
-        else:
-            mlflow.log_metric(k, v)
+        # metrics
+        metrics = model.get_metrics()
+        for k, v in metrics.items():
+            print(k, v)
+            # curves
+            if isinstance(v, list):
+                for step, loss in enumerate(v):
+                    mlflow.log_metric(k, loss, step=step)
+
+            # scalars
+            else:
+                mlflow.log_metric(k, v)
 
 
 if __name__ == "__main__":

@@ -1,75 +1,108 @@
+import os
+
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
+from pytorch_lightning.callbacks import EarlyStopping
+import pytorch_lightning as pl
+from torchmetrics.classification import BinaryAccuracy, BinaryF1Score
 import mlflow
 import mlflow.pytorch
-from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 
 from .model_interface import BaseModel
 
 
-class MLP(nn.Module):
-    """
-    Dynamicaly configurable MLP with output_dim=1.
-    """
+class LitMLP(pl.LightningModule):
     def __init__(
         self,
         input_dim: int,
         hidden_layers: list[int],
+        lr: float,
         activation=nn.ReLU
-    ):
+    ) -> None:
         super().__init__()
+        self.save_hyperparameters()
 
         layers = []
         in_dim = input_dim
-
         for h in hidden_layers:
             layers.append(nn.Linear(in_dim, h))
-            layers.append(activation)
+            # robustness to nn.ReLU or nn.ReLU()
+            if isinstance(activation, type):
+                print(f"Instantiating {str(activation)} to {str(activation())}")
+                layers.append(activation())
+            else:
+                print(f"Giving {str(activation)} directly")
+                layers.append(activation)
             in_dim = h
-
         layers.append(nn.Linear(in_dim, 1))
 
         self.network = nn.Sequential(*layers)
+        self.loss_fn = nn.BCEWithLogitsLoss()
+
+        self.train_acc = BinaryAccuracy()
+        self.val_acc = BinaryAccuracy()
+        self.val_f1 = BinaryF1Score()
 
     def forward(self, x):
         return self.network(x)
 
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        logits = self(x)
+        loss = self.loss_fn(logits, y)
+        self.train_acc(torch.sigmoid(logits), y)
+
+        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_acc", self.train_acc, prog_bar=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        logits = self(x)
+        loss = self.loss_fn(logits, y)
+
+        preds = torch.sigmoid(logits)
+        self.val_acc(preds, y)
+        self.val_f1(preds, y)
+
+        # used for early stopping
+        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_acc", self.val_acc, prog_bar=True)
+        self.log("val_f1", self.val_f1, prog_bar=True)
+        return loss
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
+
 
 class TorchMLPClassifier(BaseModel):
-
     def __init__(
         self,
         input_dim: int,
         hidden_layers: list = [64, 32],
-        loss_fn=None,
         lr=1e-3,
-        activation=nn.ReLU(),
+        activation=nn.ReLU,
         epochs: int = 10,
-        batch_size: int = 32
+        batch_size: int = 32,
+        patience: int = 5   # Early stopping
     ):
-        self.device = ("cuda" if torch.cuda.is_available() else "cpu")
+        self.input_dim = input_dim
+        self.hidden_layers = hidden_layers
+        self.lr = lr
+        self.activation = activation
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.patience = patience
 
-        # model
-        self.model = MLP(
-            input_dim=input_dim,
-            hidden_layers=hidden_layers,
-            activation=activation or nn.ReLU()
-        ).to(self.device)
-
-        # loss
-        self.loss_fn = loss_fn or nn.BCEWithLogitsLoss()
-
-        # optimizer
-        self.optimizer = torch.optim.Adam(
-            params=self.model.parameters(),
-            lr=lr,
-        )
+        self.model = LitMLP(input_dim, hidden_layers, lr, activation)
+        self.trainer = None
+        self.metrics = {}
 
         self.params = {
             "input_dim": input_dim,
             "hidden_layers": str(hidden_layers),
-            "loss_fn": str(loss_fn),
+            "loss_fn": "BCEWithLogitsLoss",
             "optimizer_cls": "Adam",
             "activation": str(activation),
             "lr": lr,
@@ -77,148 +110,40 @@ class TorchMLPClassifier(BaseModel):
             "batch_size": batch_size
         }
 
-        self.epochs = epochs
-        self.batch_size = batch_size
+    def _prepare_dataloader(self, X, y, shuffle=False):
+        X_t = torch.from_numpy(X).float()
+        y_t = torch.from_numpy(y).float().unsqueeze(1)
+        dataset = TensorDataset(X_t, y_t)
+        return DataLoader(dataset, batch_size=self.batch_size, shuffle=shuffle, num_workers=0)
 
     def fit(self, X_train, y_train, X_eval=None, y_eval=None):
+        train_loader = self._prepare_dataloader(X_train, y_train, shuffle=True)
+        val_loader = self._prepare_dataloader(X_eval, y_eval) if X_eval is not None else None
 
-        self.model.train()
+        # Early stopping
+        callbacks = []
+        if val_loader:
+            early_stop = EarlyStopping(
+                monitor="val_loss",
+                patience=self.patience,
+                mode="min",
+                verbose=True
+            )
+            callbacks.append(early_stop)
 
-        # =========================
-        #          Device
-        # =========================
-        X_train = torch.from_numpy(X_train).to(torch.float32).to(self.device)
-        y_train = torch.from_numpy(y_train).float().unsqueeze(1).to(torch.float32).to(self.device)
-
-        if X_eval is not None:
-            X_eval = torch.from_numpy(X_eval).to(torch.float32).to(self.device)
-            y_eval = torch.from_numpy(y_eval).unsqueeze(1).to(torch.float32).to(self.device)
-
-        # =========================
-        #     Dataset / Loader
-        # =========================
-        train_dataset = TensorDataset(X_train, y_train)
-
-        train_loader = DataLoader(
-            train_dataset,
-            batch_size=self.batch_size,
-            shuffle=True,
+        # Training
+        self.trainer = pl.Trainer(
+            max_epochs=self.epochs,
+            callbacks=callbacks,
+            accelerator="auto",
+            devices=1,
+            enable_checkpointing=True
         )
 
-        # =========================
-        #     Metrics container
-        # =========================
-        self.metrics = {
-            "train_loss": [],
-            "eval_loss": [],
-        }
+        self.trainer.fit(self.model, train_loader, val_loader)
 
-        # =========================
-        # Training loop
-        # =========================
-        for epoch in range(self.epochs):
-
-            self.model.train()
-            epoch_loss = 0.0
-
-            for xb, yb in train_loader:
-                self.optimizer.zero_grad()
-
-                logits = self.model(xb)
-                loss = self.loss_fn(logits, yb)
-
-                loss.backward()
-                self.optimizer.step()
-
-                epoch_loss += loss.item() * xb.size(0)
-
-            epoch_loss /= len(train_loader.dataset)
-            self.metrics["train_loss"].append(epoch_loss)
-
-            # -------------------------
-            #        Eval loss
-            # -------------------------
-            eval_loss = None
-
-            if X_eval is not None:
-                self.model.eval()
-                with torch.no_grad():
-                    logits_eval = self.model(X_eval)
-                    eval_loss = self.loss_fn(logits_eval, y_eval).item()
-
-                self.metrics["eval_loss"].append(eval_loss)
-
-            print(
-                f"Epoch {epoch + 1}/{self.epochs} "
-                f"- train_loss: {epoch_loss:.4f}"
-                + (f" - eval_loss: {eval_loss:.4f}" if eval_loss else "")
-            )
-
-        # =========================
-        # Final metrics computation
-        # =========================
-        self.model.eval()
-
-        def compute_metrics(X, y):
-            with torch.no_grad():
-                logits = self.model(X)
-                probs = torch.sigmoid(logits)
-                preds = (probs > 0.5).int()
-
-            y_true = y.cpu().numpy().ravel()
-            y_pred = preds.cpu().numpy().ravel()
-
-            acc = accuracy_score(y_true, y_pred)
-            f1 = f1_score(y_true, y_pred)
-            cfm = confusion_matrix(y_true, y_pred)
-
-            return acc, f1, cfm
-
-        # ---- train metrics ----
-        train_acc, train_f1, train_cfm = compute_metrics(X_train, y_train)
-        t_n, f_p, f_n, t_p = train_cfm.ravel()
-
-        self.metrics.update({
-            "train_accuracy": train_acc,
-            "train_f1": train_f1,
-            "train_t_n": t_n,
-            "train_f_p": f_p,
-            "train_t_p": t_p,
-            "train_f_n": f_n,
-        })
-
-        if X_eval is not None:
-            eval_acc, eval_f1, eval_cfm = compute_metrics(X_eval, y_eval)
-
-            t_n, f_p, f_n, t_p = eval_cfm.ravel()
-            self.metrics.update({
-                "eval_accuracy": eval_acc,
-                "eval_f1": eval_f1,
-                "eval_t_n": t_n,
-                "eval_f_p": f_p,
-                "eval_t_p": t_p,
-                "eval_f_n": f_n,
-            })
-
-    @torch.no_grad()
-    def predict(self, X):
-        self.model.eval()
-
-        X = torch.from_numpy(X).to(torch.float32).to(self.device)
-        logits = self.model(X)
-
-        probs = torch.sigmoid(logits)
-        return (probs > 0.5).long().squeeze(1)
-
-    @torch.no_grad()
-    def predict_proba(self, X):
-        self.model.eval()
-
-        X = torch.from_numpy(X).to(torch.float32).to(self.device)
-        logits = self.model(X)
-
-        probs = torch.sigmoid(logits)
-        return torch.cat([probs], dim=1)
+        self.metrics = {k: v.item() if torch.is_tensor(v) else v
+                        for k, v in self.trainer.logged_metrics.items()}
 
     def get_params(self):
         return self.params
@@ -226,42 +151,53 @@ class TorchMLPClassifier(BaseModel):
     def get_metrics(self):
         return self.metrics
 
-    def save(self, artifact_path: str = "model"):
-        """
-        Upload to MLFlow.
-        """
+    @torch.no_grad()
+    def predict(self, X):
+        self.model.eval()
+        X_t = torch.from_numpy(X).float()
+        logits = self.model(X_t)
+        return (torch.sigmoid(logits) > 0.5).long().numpy().squeeze()
 
-        mlflow.pytorch.log_model(
-            pytorch_model=self.model,
-            artifact_path=artifact_path,
-        )
+    @torch.no_grad()
+    def predict_proba(self, X):
+        self.model.eval()
+        X_t = torch.from_numpy(X).float()
+        logits = self.model(X_t)
+        return torch.sigmoid(logits).long().numpy().squeeze()
 
-        # sauver aussi la config nécessaire au reload
+    def save(self, name: str = "model"):
+        # Pour éviter les soucis de configurations trop lourdes
+        os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] = "600"
+        os.environ["MLFLOW_CLIENT_HTTP_TIMEOUT"] = "600"
+        os.environ["MLFLOW_DISABLE_ENV_MANAGER_CONDA"] = "True"
+        mlflow.pytorch.log_model(self.model, name)
         mlflow.log_params({
-            "input_dim": self.model.network[0].in_features,
-            "output_dim": self.model.network[-1].out_features,
+            "hidden_layers": self.hidden_layers,
+            "lr": self.lr,
+            "batch_size": self.batch_size
         })
 
-    # ======================
-    # LOAD
-    # ======================
     @classmethod
-    def load(cls, model_uri: str, device=None):
+    def load(cls, path: str):
         """
-        Download from MLFlow.
+        Télécharge le modèle depuis MLflow et reconstruit l'objet TorchMLPClassifier.
         """
 
-        device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        loaded_lit_model = mlflow.pytorch.load_model(path)
+        obj = cls.__new__(cls)
+        hparams = loaded_lit_model.hparams
 
-        model = mlflow.pytorch.load_model(model_uri)
+        obj.input_dim = hparams.input_dim
+        obj.hidden_layers = hparams.hidden_layers
+        obj.lr = hparams.lr
+        obj.activation = hparams.activation
 
-        obj = cls.__new__(cls)  # bypass __init__
-        obj.model = model.to(device)
-        obj.device = device
-        obj.model.eval()
+        obj.epochs = 10
+        obj.batch_size = 32
+        obj.patience = 5
 
-        # placeholders (pas nécessaires pour inference)
-        obj.optimizer = None
-        obj.loss_fn = None
+        obj.model = loaded_lit_model
+        obj.trainer = pl.Trainer(accelerator="auto", devices=1)
+        obj.metrics = {}
 
         return obj
