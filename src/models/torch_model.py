@@ -7,8 +7,6 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.loggers import MLFlowLogger
 from torchmetrics.classification import BinaryAccuracy, BinaryF1Score
-import mlflow
-import mlflow.pyfunc
 
 from .model_interface import BaseModel
 
@@ -73,7 +71,7 @@ class LitMLP(pl.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
 
 
-class TorchMLPClassifier(BaseModel, mlflow.pyfunc.PythonModel):
+class TorchMLPClassifier(BaseModel):
     def __init__(
         self,
         input_dim: int,
@@ -154,7 +152,7 @@ class TorchMLPClassifier(BaseModel, mlflow.pyfunc.PythonModel):
         return self.metrics
 
     @torch.no_grad()
-    def predict(self, X):
+    def _predict_internal(self, X):
         self.model.eval()
         X_t = torch.from_numpy(X).float() if not isinstance(X, torch.Tensor) else X.float()
         logits = self.model(X_t)
@@ -166,17 +164,3 @@ class TorchMLPClassifier(BaseModel, mlflow.pyfunc.PythonModel):
         X_t = torch.from_numpy(X).float()
         logits = self.model(X_t)
         return torch.sigmoid(logits).long().numpy().squeeze()
-
-    def save(self, name: str = "pyfunc_model"):
-        os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] = "600"
-
-        mlflow.pyfunc.log_model(
-            name=name,
-            python_model=self,
-            pip_requirements=["torch", "pytorch-lightning", "mlflow", "numpy"],
-            conda_env=None
-        )
-
-    @classmethod
-    def load(cls, path: str):
-        return mlflow.pyfunc.load_model(path)
