@@ -3,8 +3,9 @@ import os
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
-from pytorch_lightning.callbacks import EarlyStopping
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import EarlyStopping
+from pytorch_lightning.loggers import MLFlowLogger
 from torchmetrics.classification import BinaryAccuracy, BinaryF1Score
 import mlflow
 import mlflow.pytorch
@@ -120,6 +121,12 @@ class TorchMLPClassifier(BaseModel):
         train_loader = self._prepare_dataloader(X_train, y_train, shuffle=True)
         val_loader = self._prepare_dataloader(X_eval, y_eval) if X_eval is not None else None
 
+        mlflow_logger = MLFlowLogger(
+            experiment_name="LabelGuard",
+            tracking_uri=os.getenv("MLFLOW_TRACKING_URI"),
+            # log_model=True
+        )
+
         # Early stopping
         callbacks = []
         if val_loader:
@@ -135,6 +142,7 @@ class TorchMLPClassifier(BaseModel):
         self.trainer = pl.Trainer(
             max_epochs=self.epochs,
             callbacks=callbacks,
+            logger=mlflow_logger,
             accelerator="auto",
             devices=1,
             enable_checkpointing=True
@@ -168,9 +176,11 @@ class TorchMLPClassifier(BaseModel):
     def save(self, name: str = "model"):
         # Pour éviter les soucis de configurations trop lourdes
         os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] = "600"
-        os.environ["MLFLOW_CLIENT_HTTP_TIMEOUT"] = "600"
-        os.environ["MLFLOW_DISABLE_ENV_MANAGER_CONDA"] = "True"
-        mlflow.pytorch.log_model(self.model, name)
+        mlflow.pytorch.log_model(
+            pytorch_model=self.model,
+            pip_requirements=["torch", "pytorch-lightning", "mlflow"],
+            conda_env=None
+        )
         mlflow.log_params({
             "hidden_layers": self.hidden_layers,
             "lr": self.lr,
