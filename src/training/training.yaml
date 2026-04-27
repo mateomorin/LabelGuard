@@ -23,7 +23,7 @@ model:
       _target_: torch.nn.ReLU
     lr: 0.001
     epochs: 20
-    batch_size: 32
+    batch_size: 100
     patience: 3
   xgboost:
     n_estimators: 5

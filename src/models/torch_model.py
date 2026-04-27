@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.loggers import MLFlowLogger
 from torchmetrics.classification import BinaryAccuracy, BinaryF1Score
 import mlflow
-import mlflow.pytorch
+import mlflow.pyfunc
 
 from .model_interface import BaseModel
 
@@ -30,10 +30,8 @@ class LitMLP(pl.LightningModule):
             layers.append(nn.Linear(in_dim, h))
             # robustness to nn.ReLU or nn.ReLU()
             if isinstance(activation, type):
-                print(f"Instantiating {str(activation)} to {str(activation())}")
                 layers.append(activation())
             else:
-                print(f"Giving {str(activation)} directly")
                 layers.append(activation)
             in_dim = h
         layers.append(nn.Linear(in_dim, 1))
@@ -53,7 +51,6 @@ class LitMLP(pl.LightningModule):
         logits = self(x)
         loss = self.loss_fn(logits, y)
         self.train_acc(torch.sigmoid(logits), y)
-
         self.log("train_loss", loss, prog_bar=True)
         self.log("train_acc", self.train_acc, prog_bar=True)
         return loss
@@ -62,7 +59,6 @@ class LitMLP(pl.LightningModule):
         x, y = batch
         logits = self(x)
         loss = self.loss_fn(logits, y)
-
         preds = torch.sigmoid(logits)
         self.val_acc(preds, y)
         self.val_f1(preds, y)
@@ -77,7 +73,7 @@ class LitMLP(pl.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
 
 
-class TorchMLPClassifier(BaseModel):
+class TorchMLPClassifier(BaseModel, mlflow.pyfunc.PythonModel):
     def __init__(
         self,
         input_dim: int,
@@ -86,7 +82,7 @@ class TorchMLPClassifier(BaseModel):
         activation=nn.ReLU,
         epochs: int = 10,
         batch_size: int = 32,
-        patience: int = 5   # Early stopping
+        patience: int = 5
     ):
         self.input_dim = input_dim
         self.hidden_layers = hidden_layers
@@ -99,7 +95,6 @@ class TorchMLPClassifier(BaseModel):
         self.model = LitMLP(input_dim, hidden_layers, lr, activation)
         self.trainer = None
         self.metrics = {}
-
         self.params = {
             "input_dim": input_dim,
             "hidden_layers": str(hidden_layers),
@@ -123,8 +118,7 @@ class TorchMLPClassifier(BaseModel):
 
         mlflow_logger = MLFlowLogger(
             experiment_name="LabelGuard",
-            tracking_uri=os.getenv("MLFLOW_TRACKING_URI"),
-            # log_model=True
+            tracking_uri=os.getenv("MLFLOW_TRACKING_URI")
         )
 
         # Early stopping
@@ -162,7 +156,7 @@ class TorchMLPClassifier(BaseModel):
     @torch.no_grad()
     def predict(self, X):
         self.model.eval()
-        X_t = torch.from_numpy(X).float()
+        X_t = torch.from_numpy(X).float() if not isinstance(X, torch.Tensor) else X.float()
         logits = self.model(X_t)
         return (torch.sigmoid(logits) > 0.5).long().numpy().squeeze()
 
@@ -173,41 +167,16 @@ class TorchMLPClassifier(BaseModel):
         logits = self.model(X_t)
         return torch.sigmoid(logits).long().numpy().squeeze()
 
-    def save(self, name: str = "model"):
-        # Pour éviter les soucis de configurations trop lourdes
+    def save(self, name: str = "pyfunc_model"):
         os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] = "600"
-        mlflow.pytorch.log_model(
-            pytorch_model=self.model,
-            pip_requirements=["torch", "pytorch-lightning", "mlflow"],
+
+        mlflow.pyfunc.log_model(
+            name=name,
+            python_model=self,
+            pip_requirements=["torch", "pytorch-lightning", "mlflow", "numpy"],
             conda_env=None
         )
-        mlflow.log_params({
-            "hidden_layers": self.hidden_layers,
-            "lr": self.lr,
-            "batch_size": self.batch_size
-        })
 
     @classmethod
     def load(cls, path: str):
-        """
-        Télécharge le modèle depuis MLflow et reconstruit l'objet TorchMLPClassifier.
-        """
-
-        loaded_lit_model = mlflow.pytorch.load_model(path)
-        obj = cls.__new__(cls)
-        hparams = loaded_lit_model.hparams
-
-        obj.input_dim = hparams.input_dim
-        obj.hidden_layers = hparams.hidden_layers
-        obj.lr = hparams.lr
-        obj.activation = hparams.activation
-
-        obj.epochs = 10
-        obj.batch_size = 32
-        obj.patience = 5
-
-        obj.model = loaded_lit_model
-        obj.trainer = pl.Trainer(accelerator="auto", devices=1)
-        obj.metrics = {}
-
-        return obj
+        return mlflow.pyfunc.load_model(path)
