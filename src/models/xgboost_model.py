@@ -1,5 +1,4 @@
 import xgboost as xgb
-from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 
 from .model_interface import BaseModel
 
@@ -48,41 +47,10 @@ class XGBoostModel(BaseModel):
         #           Loss evolution
         # ====================================
         evals_result = self.model.evals_result()
-        self.metrics = {}
         self.metrics["train_logloss"] = evals_result["validation_0"]["logloss"]
 
         if X_eval is not None:
             self.metrics["eval_logloss"] = evals_result["validation_1"]["logloss"]
-
-        # ====================================
-        #           Final metrics
-        # ====================================
-        y_train_pred = self.model.predict(X_train)
-        train_cfm = confusion_matrix(y_train, y_train_pred)
-        t_n, f_p, f_n, t_p = train_cfm.ravel()
-
-        self.metrics.update({
-            "train_accuracy": accuracy_score(y_train, y_train_pred),
-            "train_f1": f1_score(y_train, y_train_pred),
-            "train_t_n": int(t_n),
-            "train_f_p": int(f_p),
-            "train_t_p": int(t_p),
-            "train_f_n": int(f_n),
-        })
-
-        if X_eval is not None:
-            y_eval_pred = self.model.predict(X_eval)
-            eval_cfm = confusion_matrix(y_eval, y_eval_pred)
-            t_n, f_p, f_n, t_p = eval_cfm.ravel()
-
-            self.metrics.update({
-                "eval_accuracy": accuracy_score(y_eval, y_eval_pred),
-                "eval_f1": f1_score(y_eval, y_eval_pred),
-                "eval_t_n": int(t_n),
-                "eval_f_p": int(f_p),
-                "eval_t_p": int(t_p),
-                "eval_f_n": int(f_n),
-            })
 
     def _predict_internal(self, X):
         return self.model.predict(X)

@@ -60,6 +60,13 @@ def main(cfg: DictConfig):
         model.fit(X_train, y_train, X_eval, y_eval)
 
         # ==============================
+        #            Evaluation
+        # ==============================
+        logger.info("Training...")
+
+        model.final_eval(X_train, y_train, X_eval, y_eval)
+
+        # ==============================
         #        MLFlow logging
         # ==============================
         logger.info("Logging to MLFlow...")
