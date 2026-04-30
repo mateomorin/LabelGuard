@@ -17,6 +17,7 @@ class LitMLP(pl.LightningModule):
         self,
         input_dim: int,
         hidden_layers: list[int],
+        dropout_layers: list[float],
         lr: float,
         activation=nn.ReLU
     ) -> None:
@@ -25,13 +26,14 @@ class LitMLP(pl.LightningModule):
 
         layers = []
         in_dim = input_dim
-        for h in hidden_layers:
+        for h, p in zip(hidden_layers, dropout_layers):
             layers.append(nn.Linear(in_dim, h))
             # robustness to nn.ReLU or nn.ReLU()
             if isinstance(activation, type):
                 layers.append(activation())
             else:
                 layers.append(activation)
+            layers.append(nn.Dropout(p))
             in_dim = h
         layers.append(nn.Linear(in_dim, 1))
 
@@ -76,7 +78,8 @@ class TorchMLPClassifier(BaseModel):
     def __init__(
         self,
         input_dim: int,
-        hidden_layers: list = [64, 32],
+        hidden_layers: list = [1024, 256],
+        dropout_layers: list = [0.4, 0.2],
         lr=1e-3,
         activation=nn.ReLU,
         epochs: int = 10,
@@ -85,18 +88,26 @@ class TorchMLPClassifier(BaseModel):
     ):
         self.input_dim = input_dim
         self.hidden_layers = hidden_layers
+        self.dropout_layers = dropout_layers
         self.lr = lr
         self.activation = activation
         self.epochs = epochs
         self.batch_size = batch_size
         self.patience = patience
 
-        self.model = LitMLP(input_dim, hidden_layers, lr, activation)
+        self.model = LitMLP(
+            input_dim=input_dim,
+            hidden_layers=hidden_layers,
+            dropout_layers=dropout_layers,
+            lr=lr,
+            activation=activation
+        )
         self.trainer = None
         self.metrics = {}
         self.params = {
             "input_dim": input_dim,
             "hidden_layers": str(hidden_layers),
+            "dropout_layers": str(dropout_layers),
             "loss_fn": "BCEWithLogitsLoss",
             "optimizer_cls": "Adam",
             "activation": str(activation),

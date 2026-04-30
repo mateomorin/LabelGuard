@@ -18,7 +18,8 @@ model:
     max_iter: 100000
   mlp:
     input_dim: 4096
-    hidden_layers: [128, 32, 8]
+    hidden_layers: [1024, 256]
+    dropout_layers: [0.3, 0]
     activation:
       _target_: torch.nn.ReLU
     lr: 0.001
@@ -26,7 +27,7 @@ model:
     batch_size: 100
     patience: 3
   xgboost:
-    n_estimators: 5
+    n_estimators: 25
     learning_rate: 0.001
     max_depth: 2
     min_split_loss: 0

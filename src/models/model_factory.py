@@ -41,8 +41,10 @@ def build_model(cfg):
     elif model_type == "mlp":
         mlp_cfg = cfg["model"]["mlp"]
         model = TorchMLPClassifier(
+            is_resnet=False,
             input_dim=mlp_cfg["input_dim"],
             hidden_layers=mlp_cfg["hidden_layers"],
+            dropout_layers=mlp_cfg["dropout_layers"],
             activation=instantiate(mlp_cfg["activation"]),
             lr=mlp_cfg["lr"],
             epochs=mlp_cfg["epochs"],
