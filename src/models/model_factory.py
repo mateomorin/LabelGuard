@@ -9,9 +9,9 @@ from .xgboost_model import XGBoostModel
 
 def build_model(cfg):
 
-    name = cfg["model"]["name"]
+    model_type = cfg["model"]["type"]
 
-    if name == "logreg":
+    if model_type == "logreg":
         logreg_cfg = cfg["model"]["logreg"]
         model = SklearnModel(
             LogisticRegression(
@@ -24,7 +24,7 @@ def build_model(cfg):
 
         return model
 
-    elif name == "svm":
+    elif model_type == "svm":
         svm_cfg = cfg["model"]["svm"]
         model = SklearnModel(
             SVC(
@@ -38,7 +38,7 @@ def build_model(cfg):
 
         return model
 
-    elif name == "mlp":
+    elif model_type == "mlp":
         mlp_cfg = cfg["model"]["mlp"]
         model = TorchMLPClassifier(
             input_dim=mlp_cfg["input_dim"],
@@ -52,17 +52,18 @@ def build_model(cfg):
 
         return model
 
-    elif name == "xgboost":
+    elif model_type == "xgboost":
         xgb_cfg = cfg["model"]["xgboost"]
         model = XGBoostModel(
             n_estimators=xgb_cfg["n_estimators"],
             learning_rate=xgb_cfg["learning_rate"],
             min_split_loss=xgb_cfg["min_split_loss"],
             max_depth=xgb_cfg["max_depth"],
-            seed=xgb_cfg["random_state"],
             subsample=xgb_cfg["subsample"],
             colsample_bytree=xgb_cfg["colsample_bytree"],
             random_state=cfg["random_state"]
         )
 
-    raise ValueError("Unknown model")
+        return model
+
+    raise ValueError(f"Unknown model : {model_type}")

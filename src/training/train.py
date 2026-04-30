@@ -1,5 +1,6 @@
 import logging
 import os
+import secrets
 
 from dotenv import load_dotenv
 import hydra
@@ -64,7 +65,6 @@ def main(cfg: DictConfig):
         logger.info("Logging to MLFlow...")
 
         # model
-        model.save(name=cfg["model"]["name"])
         mlflow.log_params(params=model.get_params())
 
         # data
@@ -85,6 +85,7 @@ def main(cfg: DictConfig):
             # scalars
             else:
                 mlflow.log_metric(k, v)
+        model.save(name=cfg["model"]["type"] + '-' + secrets.token_urlsafe(4))
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ from torch.utils.data import TensorDataset, DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.loggers import MLFlowLogger
+import mlflow
 from torchmetrics.classification import BinaryAccuracy, BinaryF1Score
 
 from .model_interface import BaseModel
@@ -114,10 +115,20 @@ class TorchMLPClassifier(BaseModel):
         train_loader = self._prepare_dataloader(X_train, y_train, shuffle=True)
         val_loader = self._prepare_dataloader(X_eval, y_eval) if X_eval is not None else None
 
-        mlflow_logger = MLFlowLogger(
-            experiment_name="LabelGuard",
-            tracking_uri=os.getenv("MLFLOW_TRACKING_URI")
-        )
+        active_run = mlflow.active_run()
+
+        if active_run:
+            mlflow_logger = MLFlowLogger(
+                experiment_name="LabelGuard",
+                tracking_uri=os.getenv("MLFLOW_TRACKING_URI"),
+                run_id=active_run.info.run_id
+            )
+
+        else:
+            mlflow_logger = MLFlowLogger(
+                experiment_name="LabelGuard",
+                tracking_uri=os.getenv("MLFLOW_TRACKING_URI")
+            )
 
         # Early stopping
         callbacks = []

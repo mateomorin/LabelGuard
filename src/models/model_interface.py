@@ -12,8 +12,10 @@ class BaseModel(ABC, mlflow.pyfunc.PythonModel):
     def load_context(self, context):
         pass
 
-    def predict(self, model_input, context=None):
+    def predict(self, context, model_input=None):
         """For MLFlow (context is never used)"""
+        if model_input is None:
+            return self._predict_internal(context)
         return self._predict_internal(model_input)
 
     @abstractmethod

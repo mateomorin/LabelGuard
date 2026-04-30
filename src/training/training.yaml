@@ -8,7 +8,7 @@ qdrant:
   n_samples: 5000
 
 model:
-  name: mlp
+  type: "mlp"
   logreg:
     C: 1
     solver: sag
