@@ -8,7 +8,7 @@ spec:
     - name: main-dag
       dag:
         tasks:
-          # Branche Parallèle CPU : SVM, LogReg, XGBoost
+          # Branche Parallele CPU : SVM, LogReg, XGBoost
           - name: train-cpu
             template: trainer-template
             arguments:
@@ -24,20 +24,19 @@ spec:
               - { type: "logreg", overrides: "model.logreg.C=0.1,1.0,10.0" }
               - { type: "xgboost", overrides: "model.xgboost.max_depth=3,6 model.xgboost.n_estimators=50,100,200" }
 
-          # Branche Parallèle GPU : Torch
+          # Branche Parallele GPU : Torch
           - name: train-gpu
             template: trainer-template
             arguments:
               parameters:
-                parameters:
-                - name: model_type
-                  value: "mlp"
-                - name: overrides
-                  value: "model.mlp.lr=0.01,0.001 model.mlp.batch_size=32,64"
-                - name: use_gpu
-                  value: "true"
-                - name: image
-                  value: "inseefrlab/onyxia-vscode-pytorch:py3.13.5-gpu"
+              - name: model_type
+                value: "mlp"
+              - name: overrides
+                value: "model.mlp.lr=0.01,0.001 model.mlp.batch_size=32,64"
+              - name: use_gpu
+                value: "true"
+              - name: image
+                value: "inseefrlab/onyxia-vscode-pytorch:py3.13.5-gpu"
 
     - name: trainer-template
       inputs:
@@ -51,7 +50,7 @@ spec:
         image: "{{inputs.parameters.image}}"
         imagePullPolicy: Always
         resources:
-          # On définit les ressources dynamiquement
+          # On definit les ressources dynamiquement
           limits:
             nvidia.com/gpu: "{{= inputs.parameters.use_gpu == 'true' ? 1 : 0 }}"
             cpu: "{{= inputs.parameters.use_gpu == 'true' ? '30000m' : '2000m' }}"
@@ -66,22 +65,18 @@ spec:
             set -e
             git clone -b main https://github.com/mateomorin/LabelGuard.git
             cd LabelGuard
-            # On passe le model_type et les hyperparamètres à Hydra
+            # On passe le model_type et les hyperparametres à Hydra
             # Le flag -m lance autant de runs MLFlow qu'il y a de configs dans 'overrides'
             uv run python -m src.training.trainer \
-              model={{inputs.parameters.model_type}} \
+              model.type={{inputs.parameters.model_type}} \
               {{inputs.parameters.overrides}} \
               -m
         env:
-          - name: AWS_ACCESS_KEY_ID
-            valueFrom: { secretKeyRef: { name: s3-secret, key: accessKey } }
-          - name: AWS_SECRET_ACCESS_KEY
-            valueFrom: { secretKeyRef: { name: s3-secret, key: secretKey } }
-          - name: AWS_DEFAULT_REGION
-            value: us-east-1
-          - name: AWS_S3_ENDPOINT
-            value: minio.lab.sspcloud.fr
-          - name: MLFLOW_S3_ENDPOINT_URL
-            value: https://minio.lab.sspcloud.fr
           - name: MLFLOW_TRACKING_URI
-            value: http://mlflow.lab.sspcloud.fr
+            valueFrom: { secretKeyRef: { name: labelguard-train, key: MLFLOW_TRACKING_URI } }
+          - name: MLFLOW_TRACKING_USERNAME
+            valueFrom: { secretKeyRef: { name: labelguard-train, key: MLFLOW_TRACKING_USERNAME } }
+          - name: MLFLOW_TRACKING_PASSWORD
+            valueFrom: { secretKeyRef: { name: labelguard-train, key: MLFLOW_TRACKING_PASSWORD } }
+          - name: QDRANT_API_KEY
+            valueFrom: { secretKeyRef: { name: labelguard-train, key: QDRANT_API_KEY } }
